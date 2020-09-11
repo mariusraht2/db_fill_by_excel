@@ -168,12 +168,62 @@ CLASS lcl_db_export IMPLEMENTATION.
 
 ENDCLASS.
 
+
+CLASS lcl_db_import DEFINITION
+  FINAL
+  CREATE PRIVATE.
+
+  PUBLIC SECTION.
+    CLASS-METHODS: get_instance
+      RETURNING
+        VALUE(ro_instance) TYPE REF TO lcl_db_import.
+    METHODS execute.
+
+  PRIVATE SECTION.
+    CLASS-DATA: instance TYPE REF TO lcl_db_import.
+
+
+
+ENDCLASS.
+
+
+CLASS lcl_db_import IMPLEMENTATION.
+
+  METHOD get_instance.
+
+    IF instance IS NOT BOUND.
+      instance = NEW lcl_db_import( ).
+    ENDIF.
+
+    ro_instance = instance.
+
+  ENDMETHOD.
+
+
+  METHOD execute.
+
+    DATA(lt_data) = VALUE string_table( ).
+    cl_gui_frontend_services=>gui_upload(
+      EXPORTING
+        filename = CONV #( p_value_file )
+        filetype = 'ASC'
+      CHANGING
+        data_tab = lt_data ).
+
+    ##TODO " Import values by column name
+
+
+
+  ENDMETHOD.
+
+ENDCLASS.
+
 "$. Endregion Classes
 
 "$. Region Main
 
 *&---------------------------------------------------------------------*
-*&      Form  CHOOSE_SOURCE_FILE
+*&      Form  CHOOSE_VALUE_FILE
 *&---------------------------------------------------------------------*
 FORM choose_value_file.
 
@@ -273,8 +323,9 @@ ENDFORM.
 FORM export.
 
   DATA(lv_is_valid) = abap_true.
-  PERFORM check_tabname CHANGING lv_is_valid.
 
+  PERFORM check_tabname CHANGING lv_is_valid.
+  PERFORM check_separator CHANGING lv_is_valid.
   CHECK lv_is_valid EQ abap_true.
 
   lcl_db_export=>get_instance( )->execute( ).
@@ -286,18 +337,10 @@ FORM import.
   DATA(lv_is_valid) = abap_true.
 
   PERFORM check_tabname CHANGING lv_is_valid.
-  CHECK lv_is_valid EQ abap_true.
-
   PERFORM check_separator CHANGING lv_is_valid.
   CHECK lv_is_valid EQ abap_true.
 
-  DATA(lt_data) = VALUE string_table( ).
-  cl_gui_frontend_services=>gui_upload(
-    EXPORTING
-      filename = CONV #( p_value_file )
-      filetype = 'ASC'
-    CHANGING
-      data_tab = lt_data ).
+  lcl_db_import=>get_instance( )->execute( ).
 
 ENDFORM.
 
