@@ -100,6 +100,65 @@
       <RPY_DYFATC>
        <CONT_TYPE>SCREEN</CONT_TYPE>
        <CONT_NAME>SCREEN</CONT_NAME>
+       <TYPE>TEXT</TYPE>
+       <NAME>LBL_SEPARATOR</NAME>
+       <TEXT>Field_Separator</TEXT>
+       <LINE>005</LINE>
+       <COLUMN>001</COLUMN>
+       <LENGTH>015</LENGTH>
+       <VISLENGTH>015</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <REQU_ENTRY>N</REQU_ENTRY>
+       <LABELLEFT>X</LABELLEFT>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>SCREEN</CONT_TYPE>
+       <CONT_NAME>SCREEN</CONT_NAME>
+       <TYPE>TEMPLATE</TYPE>
+       <NAME>P_SEPARATOR</NAME>
+       <TEXT>_</TEXT>
+       <LINE>005</LINE>
+       <COLUMN>017</COLUMN>
+       <LENGTH>001</LENGTH>
+       <VISLENGTH>001</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <INPUT_FLD>X</INPUT_FLD>
+       <OUTPUT_FLD>X</OUTPUT_FLD>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>SCREEN</CONT_TYPE>
+       <CONT_NAME>SCREEN</CONT_NAME>
+       <TYPE>CHECK</TYPE>
+       <NAME>P_EXPORT_ONLY_HDR</NAME>
+       <LINE>005</LINE>
+       <COLUMN>025</COLUMN>
+       <LENGTH>001</LENGTH>
+       <VISLENGTH>001</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <INPUT_FLD>X</INPUT_FLD>
+       <OUTPUT_FLD>X</OUTPUT_FLD>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>SCREEN</CONT_TYPE>
+       <CONT_NAME>SCREEN</CONT_NAME>
+       <TYPE>TEXT</TYPE>
+       <NAME>LBL_EXPORT_ONLY_HDR</NAME>
+       <TEXT>Nur_Header_exportieren?</TEXT>
+       <LINE>005</LINE>
+       <COLUMN>027</COLUMN>
+       <LENGTH>023</LENGTH>
+       <VISLENGTH>023</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <REQU_ENTRY>N</REQU_ENTRY>
+       <LABELRIGHT>X</LABELRIGHT>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>SCREEN</CONT_TYPE>
+       <CONT_NAME>SCREEN</CONT_NAME>
        <TYPE>OKCODE</TYPE>
        <NAME>OK_CODE</NAME>
        <TEXT>____________________</TEXT>
@@ -202,6 +261,7 @@
       <TEXT_NAME>ICON_EXPORT</TEXT_NAME>
       <ICON_ID>@49@</ICON_ID>
       <FUN_TEXT>Export table values</FUN_TEXT>
+      <ICON_TEXT>Export</ICON_TEXT>
      </RSMPE_FUNT>
      <RSMPE_FUNT>
       <CODE>IMPORT</CODE>
@@ -210,6 +270,7 @@
       <TEXT_NAME>ICON_IMPORT</TEXT_NAME>
       <ICON_ID>@48@</ICON_ID>
       <FUN_TEXT>Import table values</FUN_TEXT>
+      <ICON_TEXT>Import</ICON_TEXT>
      </RSMPE_FUNT>
     </FUN>
     <BUT>
@@ -224,11 +285,6 @@
       <CODE>0001</CODE>
       <NO>02</NO>
       <PFNO>06</PFNO>
-     </RSMPE_BUT>
-     <RSMPE_BUT>
-      <PFK_CODE>000001</PFK_CODE>
-      <CODE>0001</CODE>
-      <NO>03</NO>
      </RSMPE_BUT>
     </BUT>
     <PFK>

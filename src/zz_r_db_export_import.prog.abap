@@ -10,8 +10,10 @@ REPORT zz_r_db_export_import.
 CONSTANTS: cv_default_start_dir TYPE saepfad VALUE 'C:\',
            cv_default_separator TYPE c LENGTH 1 VALUE ';'.
 
-DATA: p_table_name TYPE dd02l-tabname,
-      p_value_file TYPE saepfad.
+DATA: p_table_name      TYPE dd02l-tabname,
+      p_value_file      TYPE saepfad,
+      p_separator       TYPE c LENGTH 1 VALUE cv_default_separator,
+      p_export_only_hdr TYPE abap_bool.
 
 DATA: ok_code LIKE sy-ucomm,
       save_ok LIKE sy-ucomm.
@@ -87,6 +89,8 @@ CLASS lcl_db_export IMPLEMENTATION.
     FIELD-SYMBOLS: <lt_table> TYPE STANDARD TABLE,
                    <ls_line>  TYPE data.
 
+    CHECK p_export_only_hdr EQ abap_false.
+
     CREATE DATA lr_table TYPE STANDARD TABLE OF (p_table_name).
     ASSIGN lr_table->* TO <lt_table>.
 
@@ -113,7 +117,7 @@ CLASS lcl_db_export IMPLEMENTATION.
             lv_csv = lv_field_content.
 
           WHEN OTHERS.
-            CONCATENATE lv_csv lv_field_content INTO lv_csv SEPARATED BY cv_default_separator.
+            CONCATENATE lv_csv lv_field_content INTO lv_csv SEPARATED BY p_separator.
 
         ENDCASE.
 
@@ -141,7 +145,7 @@ CLASS lcl_db_export IMPLEMENTATION.
       IF sy-tabix = 1.
         lv_csv = <ls_dd03l>-fieldname.
       ELSE.
-        CONCATENATE lv_csv cv_default_separator <ls_dd03l>-fieldname INTO lv_csv.
+        CONCATENATE lv_csv p_separator <ls_dd03l>-fieldname INTO lv_csv.
       ENDIF.
     ENDLOOP.
 
@@ -222,10 +226,21 @@ FORM check_tabname CHANGING lv_is_valid.
 
 ENDFORM.
 
+FORM check_separator CHANGING lv_is_valid.
+
+  IF p_separator EQ ''.
+    p_separator = cv_default_separator.
+    lv_is_valid = abap_false.
+  ENDIF.
+
+ENDFORM.
+
 FORM read_values.
 
   DATA(lt_dynpfields) = VALUE dynpread_tabtype( ( fieldname = 'P_VALUE_FILE' )
-                                                ( fieldname = 'DD02L-TABNAME' ) ).
+                                                ( fieldname = 'DD02L-TABNAME' )
+                                                ( fieldname = 'P_SEPARATOR' )
+                                                ( fieldname = 'P_EXPORT_ONLY_HDR' ) ).
 
   CALL FUNCTION 'DYNP_VALUES_READ'
     EXPORTING
@@ -247,8 +262,10 @@ FORM read_values.
       OTHERS               = 11.
 
   IF sy-subrc = 0.
-    p_value_file = VALUE #( lt_dynpfields[ fieldname = 'P_VALUE_FILE' ]-fieldvalue OPTIONAL ).
-    p_table_name  = VALUE #( lt_dynpfields[ fieldname = 'DD02L-TABNAME' ]-fieldvalue OPTIONAL ).
+    p_value_file      = VALUE #( lt_dynpfields[ fieldname = 'P_VALUE_FILE'      ]-fieldvalue OPTIONAL ).
+    p_table_name      = VALUE #( lt_dynpfields[ fieldname = 'DD02L-TABNAME'     ]-fieldvalue OPTIONAL ).
+    p_separator       = VALUE #( lt_dynpfields[ fieldname = 'P_SEPARATOR'       ]-fieldvalue OPTIONAL ).
+    p_export_only_hdr = VALUE #( lt_dynpfields[ fieldname = 'P_EXPORT_ONLY_HDR' ]-fieldvalue OPTIONAL ).
   ENDIF.
 
 ENDFORM.
@@ -267,8 +284,11 @@ ENDFORM.
 FORM import.
 
   DATA(lv_is_valid) = abap_true.
-  PERFORM check_tabname CHANGING lv_is_valid.
 
+  PERFORM check_tabname CHANGING lv_is_valid.
+  CHECK lv_is_valid EQ abap_true.
+
+  PERFORM check_separator CHANGING lv_is_valid.
   CHECK lv_is_valid EQ abap_true.
 
   DATA(lt_data) = VALUE string_table( ).
