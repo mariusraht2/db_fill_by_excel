@@ -202,6 +202,12 @@ CLASS lcl_db_import IMPLEMENTATION.
 
   METHOD execute.
 
+    DATA: lr_table     TYPE REF TO data,
+          lr_structure TYPE REF TO data.
+
+    FIELD-SYMBOLS: <lt_table> TYPE STANDARD TABLE,
+                   <ls_line>  TYPE data.
+
     DATA(lt_data) = VALUE string_table( ).
     cl_gui_frontend_services=>gui_upload(
       EXPORTING
@@ -210,8 +216,36 @@ CLASS lcl_db_import IMPLEMENTATION.
       CHANGING
         data_tab = lt_data ).
 
+    CREATE DATA lr_table TYPE STANDARD TABLE OF (p_table_name).
+    ASSIGN lr_table->* TO <lt_table>.
+
+    CREATE DATA lr_structure TYPE (p_table_name).
+    ASSIGN lr_structure->* TO <ls_line>.
+
     ##TODO " Import values by column name
 
+    DATA(lt_header) = VALUE string_table( ).
+    LOOP AT lt_data ASSIGNING FIELD-SYMBOL(<ls_data>).
+
+      SPLIT <ls_data> AT p_separator INTO TABLE DATA(lt_columns).
+
+      IF lt_header IS INITIAL.
+
+        lt_header = lt_columns.
+
+      ELSE.
+
+        LOOP AT lt_header ASSIGNING FIELD-SYMBOL(<lv_header>).
+
+          ASSIGN lt_columns[ sy-tabix ] TO FIELD-SYMBOL(<lv_value>).
+
+
+
+        ENDLOOP.
+
+      ENDIF.
+
+    ENDLOOP.
 
 
   ENDMETHOD.
