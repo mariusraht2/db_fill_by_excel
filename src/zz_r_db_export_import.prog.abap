@@ -43,8 +43,8 @@ CLASS lcl_db_export DEFINITION
       build_header_line
         CHANGING ct_csv TYPE string_table,
       download
-        IMPORTING
-          it_data TYPE STANDARD TABLE.
+        CHANGING
+          ct_data TYPE STANDARD TABLE.
 
 ENDCLASS.
 
@@ -74,7 +74,9 @@ CLASS lcl_db_export IMPLEMENTATION.
       CHANGING
         ct_csv = lt_csv ).
 
-    download( lt_csv ).
+    download(
+      CHANGING
+        ct_data = lt_csv ).
 
   ENDMETHOD.
 
@@ -158,11 +160,46 @@ CLASS lcl_db_export IMPLEMENTATION.
 
     DATA(lv_filename) = CONV string( p_value_file ).
 
-    CALL FUNCTION 'GUI_DOWNLOAD'
+    cl_gui_frontend_services=>gui_download(
       EXPORTING
-        filename = lv_filename
-      TABLES
-        data_tab = it_data.
+        filename                  = lv_filename
+      CHANGING
+        data_tab                  = ct_data
+      EXCEPTIONS
+        file_write_error          = 1
+        no_batch                  = 2
+        gui_refuse_filetransfer   = 3
+        invalid_type              = 4
+        no_authority              = 5
+        unknown_error             = 6
+        header_not_allowed        = 7
+        separator_not_allowed     = 8
+        filesize_not_allowed      = 9
+        header_too_long           = 10
+        dp_error_create           = 11
+        dp_error_send             = 12
+        dp_error_write            = 13
+        unknown_dp_error          = 14
+        access_denied             = 15
+        dp_out_of_memory          = 16
+        disk_full                 = 17
+        dp_timeout                = 18
+        file_not_found            = 19
+        dataprovider_exception    = 20
+        control_flush_error       = 21
+        not_supported_by_gui      = 22
+        error_no_gui              = 23
+        OTHERS                    = 24 ).
+
+    CASE sy-subrc.
+      WHEN 0.
+        MESSAGE |Export from table { p_table_name } was successful.| TYPE 'S'.
+
+      WHEN OTHERS.
+        CLEAR: p_value_file.
+        MESSAGE |File couldn't be exported (sy-subrc = { sy-subrc }).| TYPE 'S' DISPLAY LIKE 'E'.
+
+    ENDCASE.
 
   ENDMETHOD.
 
@@ -182,8 +219,6 @@ CLASS lcl_db_import DEFINITION
   PRIVATE SECTION.
     CLASS-DATA: instance TYPE REF TO lcl_db_import.
 
-
-
 ENDCLASS.
 
 
@@ -202,51 +237,86 @@ CLASS lcl_db_import IMPLEMENTATION.
 
   METHOD execute.
 
-    DATA: lr_table     TYPE REF TO data,
-          lr_structure TYPE REF TO data.
+    DATA: lr_table        TYPE REF TO data,
+          lr_structure    TYPE REF TO data,
+          lr_struct_descr TYPE REF TO cl_abap_structdescr.
 
-    FIELD-SYMBOLS: <lt_table> TYPE STANDARD TABLE,
-                   <ls_line>  TYPE data.
+    FIELD-SYMBOLS: <lt_table_origin> TYPE STANDARD TABLE,
+                   <ls_line_origin>  TYPE data.
 
     DATA(lt_data) = VALUE string_table( ).
     cl_gui_frontend_services=>gui_upload(
       EXPORTING
-        filename = CONV #( p_value_file )
-        filetype = 'ASC'
+        filename                = CONV #( p_value_file )
+        filetype                = 'ASC'
       CHANGING
-        data_tab = lt_data ).
+        data_tab                = lt_data
+      EXCEPTIONS
+        OTHERS                  = 99 ).
+
+    IF sy-subrc <> 0.
+      CLEAR: p_value_file.
+      MESSAGE |Please enter a valid file.| TYPE 'S' DISPLAY LIKE 'E'.
+      RETURN.
+    ENDIF.
 
     CREATE DATA lr_table TYPE STANDARD TABLE OF (p_table_name).
-    ASSIGN lr_table->* TO <lt_table>.
+    ASSIGN lr_table->* TO <lt_table_origin>.
 
     CREATE DATA lr_structure TYPE (p_table_name).
-    ASSIGN lr_structure->* TO <ls_line>.
+    ASSIGN lr_structure->* TO <ls_line_origin>.
 
-    ##TODO " Import values by column name
+    lr_struct_descr ?= cl_abap_typedescr=>describe_by_data( <ls_line_origin> ).
+    DATA(lt_header_origin) = lr_struct_descr->components[].
 
-    DATA(lt_header) = VALUE string_table( ).
+    DATA(lt_header_import) = VALUE string_table( ).
+
     LOOP AT lt_data ASSIGNING FIELD-SYMBOL(<ls_data>).
 
       SPLIT <ls_data> AT p_separator INTO TABLE DATA(lt_columns).
 
-      IF lt_header IS INITIAL.
+      IF lt_header_import IS INITIAL.
 
-        lt_header = lt_columns.
+        lt_header_import = lt_columns.
 
       ELSE.
 
-        LOOP AT lt_header ASSIGNING FIELD-SYMBOL(<lv_header>).
+        LOOP AT lt_header_import ASSIGNING FIELD-SYMBOL(<lv_header>).
 
           ASSIGN lt_columns[ sy-tabix ] TO FIELD-SYMBOL(<lv_value>).
+          ASSIGN COMPONENT <lv_header> OF STRUCTURE <ls_line_origin> TO FIELD-SYMBOL(<lv_field_origin>).
 
+          IF <lv_field_origin> IS ASSIGNED.
+            <lv_field_origin> = <lv_value>.
+          ENDIF.
 
+          UNASSIGN: <lv_field_origin>, <lv_value>.
 
         ENDLOOP.
 
+        APPEND <ls_line_origin> TO <lt_table_origin>.
+
       ENDIF.
+
+      CLEAR: lt_columns.
 
     ENDLOOP.
 
+    IF <lt_table_origin> IS NOT INITIAL.
+
+      MODIFY (p_table_name) FROM TABLE <lt_table_origin>.
+      COMMIT WORK.
+
+    ENDIF.
+
+    CASE sy-subrc.
+      WHEN 0.
+        MESSAGE |Import into table { p_table_name } was successful.| TYPE 'S'.
+
+      WHEN OTHERS.
+        MESSAGE |Import into table { p_table_name } wasn't successful (sy-subrc = { sy-subrc }).| TYPE 'S' DISPLAY LIKE 'E'.
+
+    ENDCASE.
 
   ENDMETHOD.
 
@@ -263,7 +333,7 @@ FORM choose_value_file.
 
   CONSTANTS: cv_default_ext TYPE string VALUE 'csv',
              cv_file_filter TYPE string VALUE '*.csv|*.csv|',
-             cv_initial_dir TYPE string VALUE 'C:\'.
+             cv_initial_dir TYPE string VALUE '%USERPROFILE%\Downloads'.
 
   DATA: lv_subrc      TYPE sy-subrc,
         lt_file_table TYPE filetable.
