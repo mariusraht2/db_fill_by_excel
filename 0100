@@ -3,12 +3,12 @@
 *   NEVER CHANGE IT MANUALLY, PLEASE !                         *																																
 ****************************************************************																																
 %_DYNPRO																																
-ZIOT_R_DB_EXPORT_IMPORT																																
+ZZ_R_DB_EXPORT_IMPORT																																
 0100																																
 754																																
              40																																
 %_HEADER																																
-ZIOT_R_DB_EXPORT_IMPORT                 0100 0100      5 78192 37  0  0 27120  0G E                              20201111142508																																
+ZZ_R_DB_EXPORT_IMPORT                   0100 0100      5 78192 37  0  0 27120  0G E                              20201111142508																																
 %_DESCRIPTION																																
 Main screen																																
 %_FIELDS																																
