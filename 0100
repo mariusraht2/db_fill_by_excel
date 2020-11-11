@@ -3,22 +3,23 @@
 *   NEVER CHANGE IT MANUALLY, PLEASE !                         *																																
 ****************************************************************																																
 %_DYNPRO																																
-ZZ_R_DB_EXPORT_IMPORT																																
+ZIOT_R_DB_EXPORT_IMPORT																																
 0100																																
-750																																
+754																																
              40																																
 %_HEADER																																
-ZZ_R_DB_EXPORT_IMPORT                   0100 0100      5 78192 37  0  0 27120  0G E                              20200911144623																																
+ZIOT_R_DB_EXPORT_IMPORT                 0100 0100      5 78192 37  0  0 27120  0G E                              20201111142508																																
 %_DESCRIPTION																																
 Main screen																																
 %_FIELDS																																
 DD02L-TABNAME	0	CHAR	 12	30	00	00	30	00	  1	  2		  0	  0	  0		  0					  0	  0								Table_Name__	                                                                                                                                                                                                                                                        X	
-DD02L-TABNAME	C	CHAR	 30	A0	00	A0	00	08	  1	 18		  0	  0	  0		  0			DTB		 60	  0			SFSQB_SH_TABLE					______________________________	                                       00	
+DD02L-TABNAME	C	CHAR	 30	A0	00	A0	00	0C	  1	 18		  0	  0	  0		  0			DTB		 60	  0			SFSQB_SH_TABLE					?_____________________________	                                       00	
+BTN_OPEN_SE16N		CHAR	 20	00	00	00	30	00	  1	 52		  0	  0	  0		  0	P				  0	  0	101							Show_Entries_(SE16N)	                                                                                                                                                                        OPEN_SE16N	
 LBL_VALUE_FILE	0	CHAR	 15	00	00	00	30	00	  3	  2		  0	  0	  0		  0					  0	  0								Ex-/Import_File	                                                                                                                                                                                                                                                        X	
-P_VALUE_FILE	C	CHAR	 60	80	00	A0	00	0C	  3	 18		  0	  0	  0		  0					  0	  0								____________________________________________________________		
+P_VALUE_FILE	C	CHAR	 60	80	00	A0	00	0C	  3	 18		  0	  0	  0		  0					  0	  0								?___________________________________________________________		
 LBL_SEPARATOR	0	CHAR	 15	00	00	00	30	00	  5	  2		  0	  0	  0		  0					  0	  0								Field_Separator	                                                                                                                                                                                                                                                        X	
 P_SEPARATOR	C	CHAR	  1	80	00	80	00	00	  5	 18		  0	  0	  0		  0					  0	  0										
-P_EXPORT_ONLY_HDR	C	CHAR	  1	80	00	80	00	00	  5	 26		  0	  0	  0		  0	C				  0	  0	101									
+P_EXPORT_ONLY_HDR	C	CHAR	  1	80	00	80	00	00	  5	 26		  0	  0	  0		  0	C				  0	  0	102									
 LBL_EXPORT_ONLY_HDR	0	CHAR	 23	00	00	00	30	00	  5	 28		  0	  0	  0		  0					  0	  0								Nur_Header_exportieren?	                                                                                                                                                                                                                                                         X	
 OK_CODE		CHAR	 20	80	10	00	00	00	255	  1	O	  0	  0	  0		  0					  0	  0								____________________		
 %_FLOWLOGIC																																
