@@ -1,16 +1,16 @@
 *&---------------------------------------------------------------------*
-*& Report zz_r_db_export_import
+*& Report zz_r_db_fill_by_excel
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
-REPORT zz_r_db_export_import.
+REPORT ziot_r_db_export_import.
 
 "$. Region Declarations
 
 CONSTANTS: cv_default_start_dir TYPE saepfad VALUE 'C:\',
            cv_default_separator TYPE c LENGTH 1 VALUE ';'.
 
-DATA: p_table_name      TYPE dd02l-tabname,
+DATA: p_table_name      TYPE tabname,
       p_value_file      TYPE saepfad,
       p_separator       TYPE c LENGTH 1 VALUE cv_default_separator,
       p_export_only_hdr TYPE abap_bool.
@@ -307,10 +307,6 @@ CLASS lcl_db_import IMPLEMENTATION.
       MODIFY (p_table_name) FROM TABLE <lt_table_origin>.
       COMMIT WORK.
 
-    ELSE.
-
-      MESSAGE |Nothing to import into table { p_table_name } - check table column names in first row.| TYPE 'S' DISPLAY LIKE 'E'.
-
     ENDIF.
 
     CASE sy-subrc.
@@ -368,6 +364,8 @@ FORM choose_value_file.
 ENDFORM.
 
 FORM check_tabname CHANGING lv_is_valid.
+
+  lv_is_valid = abap_false.
 
   SELECT SINGLE
     FROM dd02l
@@ -452,6 +450,26 @@ FORM import.
 
 ENDFORM.
 
+FORM open_se16n.
+
+  DATA(lv_is_valid) = abap_true.
+
+  PERFORM check_tabname CHANGING lv_is_valid.
+  CHECK lv_is_valid EQ abap_true.
+
+  CALL FUNCTION 'SE16N_INTERFACE'
+    EXPORTING
+      i_tab     = p_table_name
+    EXCEPTIONS
+      no_values = 1
+      OTHERS    = 2.
+
+  IF sy-subrc <> 0.
+    MESSAGE |Table { p_table_name } couldn't be opened in SE16N.| TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+
 "$. Endregion Main
 
 "$. Region Modules
@@ -486,6 +504,9 @@ MODULE pai_0100 INPUT.
 
     WHEN 'IMPORT'.
       PERFORM import.
+
+    WHEN 'OPEN_SE16N'.
+      PERFORM open_se16n.
 
   ENDCASE.
 
