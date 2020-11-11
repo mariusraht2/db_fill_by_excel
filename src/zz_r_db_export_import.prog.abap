@@ -1,5 +1,5 @@
 *&---------------------------------------------------------------------*
-*& Report zz_r_db_fill_by_excel
+*& Report zz_r_db_export_import
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
@@ -306,6 +306,10 @@ CLASS lcl_db_import IMPLEMENTATION.
 
       MODIFY (p_table_name) FROM TABLE <lt_table_origin>.
       COMMIT WORK.
+
+    ELSE.
+
+      MESSAGE |Nothing to import into table { p_table_name } - check table column names in first row.| TYPE 'S' DISPLAY LIKE 'E'.
 
     ENDIF.
 

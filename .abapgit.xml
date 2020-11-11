@@ -15,6 +15,7 @@
     <item>/abaplint.json</item>
     <item>/azure-pipelines.yml</item>
     <item>/.devcontainer.json</item>
+    <item>/0100</item>
    </IGNORE>
   </DATA>
  </asx:values>
