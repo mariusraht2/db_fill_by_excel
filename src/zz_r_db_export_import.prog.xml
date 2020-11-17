@@ -63,7 +63,23 @@
        <INPUT_FLD>X</INPUT_FLD>
        <OUTPUT_FLD>X</OUTPUT_FLD>
        <REQU_ENTRY>O</REQU_ENTRY>
+       <POSS_ENTRY>2</POSS_ENTRY>
        <MATCHCODE>SFSQB_SH_TABLE</MATCHCODE>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>SCREEN</CONT_TYPE>
+       <CONT_NAME>SCREEN</CONT_NAME>
+       <TYPE>PUSH</TYPE>
+       <NAME>BTN_OPEN_SE16N</NAME>
+       <TEXT>Show_Entries</TEXT>
+       <LINE>001</LINE>
+       <COLUMN>051</COLUMN>
+       <LENGTH>012</LENGTH>
+       <VISLENGTH>012</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <PUSH_FCODE>OPEN_SE16N</PUSH_FCODE>
+       <FORMAT>CHAR</FORMAT>
+       <REQU_ENTRY>N</REQU_ENTRY>
       </RPY_DYFATC>
       <RPY_DYFATC>
        <CONT_TYPE>SCREEN</CONT_TYPE>
@@ -85,7 +101,7 @@
        <CONT_NAME>SCREEN</CONT_NAME>
        <TYPE>TEMPLATE</TYPE>
        <NAME>P_VALUE_FILE</NAME>
-       <TEXT>____________________________________________________________</TEXT>
+       <TEXT>?___________________________________________________________</TEXT>
        <LINE>003</LINE>
        <COLUMN>017</COLUMN>
        <LENGTH>060</LENGTH>

@@ -450,22 +450,39 @@ FORM import.
 
 ENDFORM.
 
-FORM open_se16n.
+FORM open_table_sel.
 
   DATA(lv_is_valid) = abap_true.
 
   PERFORM check_tabname CHANGING lv_is_valid.
   CHECK lv_is_valid EQ abap_true.
 
-  CALL FUNCTION 'SE16N_INTERFACE'
+  CALL FUNCTION 'OM_FUNC_MODULE_EXIST'
     EXPORTING
-      i_tab     = p_table_name
+      function_module = 'SE16N_INTERFACE'
     EXCEPTIONS
-      no_values = 1
-      OTHERS    = 2.
+      OTHERS          = 99.
 
   IF sy-subrc <> 0.
-    MESSAGE |Table { p_table_name } couldn't be opened in SE16N.| TYPE 'S' DISPLAY LIKE 'E'.
+
+    CALL FUNCTION 'RS_TABLE_LIST_CREATE'
+      EXPORTING
+        table_name = p_table_name
+      EXCEPTIONS
+        OTHERS     = 99.
+
+  ELSE.
+
+    CALL FUNCTION 'SE16N_INTERFACE'
+      EXPORTING
+        i_tab  = p_table_name
+      EXCEPTIONS
+        OTHERS = 99.
+
+  ENDIF.
+
+  IF sy-subrc <> 0.
+    MESSAGE |Table { p_table_name } couldn't be opened in selection view.| TYPE 'S' DISPLAY LIKE 'E'.
   ENDIF.
 
 ENDFORM.
@@ -506,7 +523,7 @@ MODULE pai_0100 INPUT.
       PERFORM import.
 
     WHEN 'OPEN_SE16N'.
-      PERFORM open_se16n.
+      PERFORM open_table_sel.
 
   ENDCASE.
 
