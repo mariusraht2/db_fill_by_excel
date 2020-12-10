@@ -3,7 +3,7 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <PROGDIR>
-    <NAME>ZZ_R_DB_EXPORT_IMPORT</NAME>
+    <NAME>ZCAS_R_DB_EXPORT_IMPORT</NAME>
     <DBAPL>S</DBAPL>
     <SUBC>1</SUBC>
     <FIXPT>X</FIXPT>
@@ -13,7 +13,7 @@
    <DYNPROS>
     <item>
      <HEADER>
-      <PROGRAM>ZZ_R_DB_EXPORT_IMPORT</PROGRAM>
+      <PROGRAM>ZCAS_R_DB_EXPORT_IMPORT</PROGRAM>
       <SCREEN>0100</SCREEN>
       <LANGUAGE>E</LANGUAGE>
       <DESCRIPT>Main screen</DESCRIPT>
