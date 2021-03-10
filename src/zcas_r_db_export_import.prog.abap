@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Report zcas_r_db_export_import
 *&---------------------------------------------------------------------*
-*& Version: 10.03.2021-001
+*& Version: 10.03.2021-002
 *&---------------------------------------------------------------------*
 REPORT zcas_r_db_export_import.
 
@@ -50,7 +50,8 @@ DATA: p_table_name     TYPE tabname,
       p_export_content TYPE char255.
 
 " Import Screen
-DATA: p_import_content TYPE char255.
+DATA: p_import_content TYPE char255,
+      p_exported_file  TYPE saepfad.
 
 DATA: gt_dynpfields        TYPE dynpread_tabtype,
       gt_dynpfields_export TYPE dynpread_tabtype,
@@ -80,13 +81,36 @@ CLASS lcl_db_table DEFINITION
         RETURNING
           VALUE(rv_result) TYPE abap_bool,
       open_table_sel,
-      choose_value_file,
+      choose_file
+        IMPORTING
+          iv_filename TYPE string OPTIONAL
+        CHANGING
+          cv_file     TYPE saepfad,
       choose_tr,
       is_valid_file
         IMPORTING
           iv_file          TYPE saepfad
         RETURNING
-          VALUE(rv_result) TYPE abap_bool.
+          VALUE(rv_result) TYPE abap_bool,
+      upload
+        IMPORTING
+          iv_file        TYPE saepfad
+        RETURNING
+          VALUE(rt_data) TYPE string_table,
+      download
+        IMPORTING
+          iv_file TYPE saepfad
+          it_data TYPE string_table,
+      serialize
+        IMPORTING
+          it_tables      TYPE tt_table
+        RETURNING
+          VALUE(rt_data) TYPE string_table,
+      deserialize
+        IMPORTING
+          it_data          TYPE string_table
+        RETURNING
+          VALUE(rt_tables) TYPE tt_table.
 
 ENDCLASS.
 
@@ -180,7 +204,7 @@ CLASS lcl_db_table IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD choose_value_file.
+  METHOD choose_file.
 
     CONSTANTS: cv_default_ext TYPE string VALUE 'json',
                cv_file_filter TYPE string VALUE '*.json|*.json|',
@@ -189,17 +213,13 @@ CLASS lcl_db_table IMPLEMENTATION.
     DATA: lv_subrc      TYPE sy-subrc,
           lt_file_table TYPE filetable.
 
-    IF main_tabstrip-activetab EQ 'TAB_EXPORT'.
-      DATA(lv_filename) = |{ sy-sysid }_db_export_{ sy-datum }_{ sy-uzeit }|.
-    ENDIF.
-
     CALL METHOD cl_gui_frontend_services=>file_open_dialog
       EXPORTING
         window_title            = |Choose ex-/import file|
         default_extension       = cv_default_ext
         file_filter             = cv_file_filter
         initial_directory       = cv_initial_dir
-        default_filename        = lv_filename
+        default_filename        = iv_filename
       CHANGING
         file_table              = lt_file_table
         rc                      = lv_subrc
@@ -212,9 +232,9 @@ CLASS lcl_db_table IMPLEMENTATION.
 
     ASSIGN lt_file_table[ 1 ] TO FIELD-SYMBOL(<lv_file>).
     IF <lv_file> IS NOT ASSIGNED.
-      CLEAR: p_value_file.
+      CLEAR: cv_file.
     ELSE.
-      p_value_file = <lv_file>.
+      cv_file = <lv_file>.
     ENDIF.
 
   ENDMETHOD.
@@ -270,6 +290,93 @@ CLASS lcl_db_table IMPLEMENTATION.
 
   ENDMETHOD.
 
+
+  METHOD upload.
+
+    cl_gui_frontend_services=>gui_upload(
+      EXPORTING
+        filename                = CONV #( iv_file )
+        filetype                = 'ASC'
+      CHANGING
+        data_tab                = rt_data
+      EXCEPTIONS
+        OTHERS                  = 99 ).
+
+    IF sy-subrc <> 0.
+      error = abap_true.
+      MESSAGE |File upload failed: Please check the file path.| TYPE 'S' DISPLAY LIKE 'E'.
+      RETURN.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD download.
+
+    DATA(lt_data) = it_data.
+
+    cl_gui_frontend_services=>gui_download(
+      EXPORTING
+        filename                  = CONV string( iv_file )
+      CHANGING
+        data_tab                  = lt_data
+      EXCEPTIONS
+        file_write_error          = 1
+        no_batch                  = 2
+        gui_refuse_filetransfer   = 3
+        invalid_type              = 4
+        no_authority              = 5
+        unknown_error             = 6
+        header_not_allowed        = 7
+        separator_not_allowed     = 8
+        filesize_not_allowed      = 9
+        header_too_long           = 10
+        dp_error_create           = 11
+        dp_error_send             = 12
+        dp_error_write            = 13
+        unknown_dp_error          = 14
+        access_denied             = 15
+        dp_out_of_memory          = 16
+        disk_full                 = 17
+        dp_timeout                = 18
+        file_not_found            = 19
+        dataprovider_exception    = 20
+        control_flush_error       = 21
+        not_supported_by_gui      = 22
+        error_no_gui              = 23
+        OTHERS                    = 24 ).
+
+    IF sy-subrc <> 0.
+      error = abap_true.
+      MESSAGE |File download failed: Please check the file path.| TYPE 'S' DISPLAY LIKE 'E'.
+      RETURN.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD serialize.
+
+    DATA(lo_json_serializer) = NEW cl_trex_json_serializer( it_tables ).
+    lo_json_serializer->serialize( ).
+    APPEND lo_json_serializer->get_data( ) TO rt_data.
+
+  ENDMETHOD.
+
+
+  METHOD deserialize.
+
+    DATA(lv_json) = VALUE string( ).
+    LOOP AT it_data ASSIGNING FIELD-SYMBOL(<lv_data>).
+      lv_json = |{ lv_json }{ <lv_data> }|.
+    ENDLOOP.
+
+    DATA(lo_json_deserializer) = NEW cl_trex_json_deserializer(  ).
+    lo_json_deserializer->deserialize( EXPORTING json = lv_json
+                                       IMPORTING abap = rt_tables ).
+
+  ENDMETHOD.
+
 ENDCLASS.
 
 
@@ -278,15 +385,14 @@ CLASS lcl_db_table_export DEFINITION
   CREATE PRIVATE.
 
   PUBLIC SECTION.
-    CLASS-METHODS execute.
+    CLASS-METHODS:
+      execute.
 
   PRIVATE SECTION.
-    CLASS-METHODS: download
-      CHANGING
-        ct_data TYPE string_table,
+    CLASS-METHODS:
       create_json
         RETURNING
-          VALUE(rt_data) TYPE string_table,
+          VALUE(rt_tables) TYPE tt_table,
       add_names_to_json
         RETURNING
           VALUE(rt_tables) TYPE tt_table,
@@ -295,7 +401,16 @@ CLASS lcl_db_table_export DEFINITION
           ct_tables TYPE tt_table,
       add_content_to_json
         CHANGING
-          ct_tables TYPE tt_table.
+          ct_tables TYPE tt_table,
+      det_tables_by_name
+        RETURNING
+          VALUE(rt_tables) TYPE tt_table,
+      det_tables_by_trkorr
+        RETURNING
+          VALUE(rt_tables) TYPE tt_table,
+      det_tables_by_exported_file
+        RETURNING
+          VALUE(rt_tables) TYPE tt_table.
 
 ENDCLASS.
 
@@ -312,10 +427,14 @@ CLASS lcl_db_table_export IMPLEMENTATION.
 
       CASE lv_index.
         WHEN 1.
-          DATA(lt_data) = create_json( ).
+          DATA(lt_tables) = create_json( ).
 
         WHEN 2.
-          download( CHANGING ct_data = lt_data ).
+          DATA(lt_data) = lcl_db_table=>serialize( lt_tables ).
+
+        WHEN 3.
+          lcl_db_table=>download( iv_file = p_value_file
+                                  it_data = lt_data ).
 
         WHEN OTHERS.
           EXIT.
@@ -329,19 +448,30 @@ CLASS lcl_db_table_export IMPLEMENTATION.
 
   METHOD create_json.
 
-    DATA(lt_tables) = add_names_to_json( ).
+    WHILE error EQ abap_false.
 
-    IF p_export_header EQ abap_true.
-      add_header_to_json( CHANGING  ct_tables = lt_tables ).
-    ENDIF.
+      DATA(lv_index) = sy-index.
 
-    IF p_export_content NE cv_export_content_none.
-      add_content_to_json( CHANGING ct_tables = lt_tables ).
-    ENDIF.
+      CASE lv_index.
+        WHEN 1.
+          rt_tables = add_names_to_json( ).
 
-    DATA(lo_json_serializer) = NEW cl_trex_json_serializer( lt_tables ).
-    lo_json_serializer->serialize( ).
-    APPEND lo_json_serializer->get_data( ) TO rt_data.
+        WHEN 2.
+          IF p_export_header EQ abap_true.
+            add_header_to_json( CHANGING  ct_tables = rt_tables ).
+          ENDIF.
+
+        WHEN 3.
+          IF p_export_content NE cv_export_content_none.
+            add_content_to_json( CHANGING ct_tables = rt_tables ).
+          ENDIF.
+
+        WHEN OTHERS.
+          EXIT.
+
+      ENDCASE.
+
+    ENDWHILE.
 
   ENDMETHOD.
 
@@ -350,34 +480,15 @@ CLASS lcl_db_table_export IMPLEMENTATION.
 
     IF p_table_name CN ' _0'.
 
-      CHECK lcl_db_table=>is_valid_table_name( p_table_name ) EQ abap_true.
-
-      DATA(lt_table_names) = VALUE string_table( ( |{ p_table_name }| ) ).
+      rt_tables = det_tables_by_name( ).
 
     ELSEIF p_trkorr CN ' _0'.
 
-      DATA(lt_table_keys) = VALUE tr_keys( ).
-      DATA(ls_request_header) = VALUE trwbo_request_header( trkorr = p_trkorr ).
+      rt_tables = det_tables_by_trkorr( ).
 
-      CALL FUNCTION 'TR_GET_OBJECTS_OF_REQ_AN_TASKS'
-        EXPORTING
-          is_request_header = ls_request_header
-        IMPORTING
-          et_keys           = lt_table_keys
-        EXCEPTIONS
-          invalid_input     = 1
-          OTHERS            = 2.
+    ELSEIF p_exported_file CN ' _0'.
 
-      IF sy-subrc <> 0.
-        error = abap_true.
-        MESSAGE ID sy-msgid TYPE 'I' NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 DISPLAY LIKE sy-msgty.
-        RETURN.
-      ENDIF.
-
-      lt_table_names = VALUE #( FOR <s_table_key> IN lt_table_keys
-                                  ( CONV #( <s_table_key>-objname ) ) ).
-      SORT lt_table_names.
-      DELETE ADJACENT DUPLICATES FROM lt_table_names.
+      rt_tables = det_tables_by_exported_file( ).
 
     ELSE.
 
@@ -386,9 +497,6 @@ CLASS lcl_db_table_export IMPLEMENTATION.
       RETURN.
 
     ENDIF.
-
-    rt_tables = VALUE #( FOR <v_table_name> IN lt_table_names
-                          ( name = <v_table_name> ) ).
 
   ENDMETHOD.
 
@@ -480,54 +588,70 @@ CLASS lcl_db_table_export IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD download.
+  METHOD det_tables_by_name.
 
-    DATA(lv_filename) = CONV string( p_value_file ).
+    CHECK lcl_db_table=>is_valid_table_name( p_table_name ) EQ abap_true.
+    rt_tables = VALUE #( ( name = |{ p_table_name }| ) ).
 
-    cl_gui_frontend_services=>gui_download(
+  ENDMETHOD.
+
+
+  METHOD det_tables_by_trkorr.
+
+    DATA(lt_table_keys) = VALUE tr_keys( ).
+    DATA(ls_request_header) = VALUE trwbo_request_header( trkorr = p_trkorr ).
+
+    CALL FUNCTION 'TR_GET_OBJECTS_OF_REQ_AN_TASKS'
       EXPORTING
-        filename                  = lv_filename
-      CHANGING
-        data_tab                  = ct_data
+        is_request_header = ls_request_header
+      IMPORTING
+        et_keys           = lt_table_keys
       EXCEPTIONS
-        file_write_error          = 1
-        no_batch                  = 2
-        gui_refuse_filetransfer   = 3
-        invalid_type              = 4
-        no_authority              = 5
-        unknown_error             = 6
-        header_not_allowed        = 7
-        separator_not_allowed     = 8
-        filesize_not_allowed      = 9
-        header_too_long           = 10
-        dp_error_create           = 11
-        dp_error_send             = 12
-        dp_error_write            = 13
-        unknown_dp_error          = 14
-        access_denied             = 15
-        dp_out_of_memory          = 16
-        disk_full                 = 17
-        dp_timeout                = 18
-        file_not_found            = 19
-        dataprovider_exception    = 20
-        control_flush_error       = 21
-        not_supported_by_gui      = 22
-        error_no_gui              = 23
-        OTHERS                    = 24 ).
+        invalid_input     = 1
+        OTHERS            = 2.
 
-    CASE sy-subrc.
-      WHEN 0.
-        IF p_table_name CO ' _0'.
-          MESSAGE |Export of table(s) was successful.| TYPE 'S'.
-        ELSE.
-          MESSAGE |Export of table { p_table_name } was successful.| TYPE 'S'.
-        ENDIF.
+    IF sy-subrc <> 0.
+      error = abap_true.
+      MESSAGE ID sy-msgid TYPE 'I' NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 DISPLAY LIKE sy-msgty.
+      RETURN.
+    ENDIF.
 
-      WHEN OTHERS.
-        CLEAR: p_value_file.
-        MESSAGE |File couldn't be exported (sy-subrc = { sy-subrc }).| TYPE 'S' DISPLAY LIKE 'E'.
+    DATA(lt_table_names) = VALUE string_table( FOR <s_table_key> IN lt_table_keys
+                                                 ( CONV #( <s_table_key>-objname ) ) ).
+    SORT lt_table_names.
+    DELETE ADJACENT DUPLICATES FROM lt_table_names.
 
-    ENDCASE.
+    rt_tables = VALUE #( FOR <v_table_name> IN lt_table_names
+                           ( name = <v_table_name> ) ).
+
+  ENDMETHOD.
+
+
+  METHOD det_tables_by_exported_file.
+
+    CHECK lcl_db_table=>is_valid_file( p_exported_file ) EQ abap_true.
+
+    WHILE error EQ abap_false.
+
+      DATA(lv_index) = sy-index.
+
+      CASE lv_index.
+        WHEN 1.
+          DATA(lt_data) = lcl_db_table=>upload( p_exported_file ).
+
+        WHEN 2.
+          rt_tables = lcl_db_table=>deserialize( lt_data ).
+
+          LOOP AT rt_tables ASSIGNING FIELD-SYMBOL(<ls_table>).
+            CLEAR: <ls_table>-content, <ls_table>-header.
+          ENDLOOP.
+
+        WHEN OTHERS.
+          EXIT.
+
+      ENDCASE.
+
+    ENDWHILE.
 
   ENDMETHOD.
 
@@ -544,9 +668,6 @@ CLASS lcl_db_table_import DEFINITION
 
   PRIVATE SECTION.
     CLASS-METHODS:
-      upload
-        RETURNING
-          VALUE(rt_tables) TYPE tt_table,
       change_db
         IMPORTING
           it_tables TYPE tt_table,
@@ -587,9 +708,12 @@ CLASS lcl_db_table_import IMPLEMENTATION.
 
       CASE lv_index.
         WHEN 1.
-          DATA(lt_tables) = upload( ).
+          DATA(lt_data) = lcl_db_table=>upload( p_value_file ).
 
         WHEN 2.
+          DATA(lt_tables) = lcl_db_table=>deserialize( lt_data ).
+
+        WHEN 3.
           change_db( lt_tables ).
 
         WHEN OTHERS.
@@ -598,36 +722,6 @@ CLASS lcl_db_table_import IMPLEMENTATION.
       ENDCASE.
 
     ENDWHILE.
-
-  ENDMETHOD.
-
-
-  METHOD upload.
-
-    DATA(lt_data) = VALUE string_table( ).
-    cl_gui_frontend_services=>gui_upload(
-      EXPORTING
-        filename                = CONV #( p_value_file )
-        filetype                = 'ASC'
-      CHANGING
-        data_tab                = lt_data
-      EXCEPTIONS
-        OTHERS                  = 99 ).
-
-    IF sy-subrc <> 0.
-      error = abap_true.
-      MESSAGE |Import failed: Please check the file path.| TYPE 'S' DISPLAY LIKE 'E'.
-      RETURN.
-    ENDIF.
-
-    DATA(lv_json) = VALUE string( ).
-    LOOP AT lt_data ASSIGNING FIELD-SYMBOL(<lv_data>).
-      lv_json = |{ lv_json }{ <lv_data> }|.
-    ENDLOOP.
-
-    DATA(lo_json_deserializer) = NEW cl_trex_json_deserializer(  ).
-    lo_json_deserializer->deserialize( EXPORTING json = lv_json
-                                       IMPORTING abap = rt_tables ).
 
   ENDMETHOD.
 
@@ -817,7 +911,8 @@ INITIALIZATION.
   gt_dynpfields_export = VALUE #( ( fieldname = 'P_TABLE_NAME' )
                                   ( fieldname = 'P_TRKORR' )
                                   ( fieldname = 'P_EXPORT_HEADER' )
-                                  ( fieldname = 'P_EXPORT_CONTENT' ) ).
+                                  ( fieldname = 'P_EXPORT_CONTENT' )
+                                  ( fieldname = 'P_EXPORTED_FILE' ) ).
 
   gt_dynpfields_import = VALUE #( ( fieldname = 'P_IMPORT_CONTENT' ) ).
 
@@ -917,7 +1012,19 @@ ENDMODULE.
 
 MODULE on_value_request_value_file INPUT.
 
-  lcl_db_table=>choose_value_file( ).
+  IF main_tabstrip-activetab EQ 'TAB_EXPORT'.
+    DATA(lv_filename) = |{ sy-sysid }_db_export_{ sy-datum }_{ sy-uzeit }|.
+  ENDIF.
+
+  lcl_db_table=>choose_file( EXPORTING iv_filename = lv_filename
+                             CHANGING  cv_file     = p_value_file ).
+
+ENDMODULE.
+
+
+MODULE on_value_request_exported_file INPUT.
+
+  lcl_db_table=>choose_file( CHANGING cv_file = p_exported_file ).
 
 ENDMODULE.
 
