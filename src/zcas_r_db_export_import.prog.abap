@@ -190,7 +190,7 @@ CLASS lcl_db_table IMPLEMENTATION.
           lt_file_table TYPE filetable.
 
     IF main_tabstrip-activetab EQ 'TAB_EXPORT'.
-      DATA(lv_filename) = |sap_db_export_{ sy-datum }_{ sy-uzeit }|.
+      DATA(lv_filename) = |{ sy-sysid }_db_export_{ sy-datum }_{ sy-uzeit }|.
     ENDIF.
 
     CALL METHOD cl_gui_frontend_services=>file_open_dialog
