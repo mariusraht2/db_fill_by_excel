@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Report zcas_r_db_export_import
 *&---------------------------------------------------------------------*
-*& Version: 10.03.2021-002
+*& Version: 10.03.2021-003
 *&---------------------------------------------------------------------*
 REPORT zcas_r_db_export_import.
 
@@ -357,9 +357,8 @@ CLASS lcl_db_table IMPLEMENTATION.
 
   METHOD serialize.
 
-    DATA(lo_json_serializer) = NEW cl_trex_json_serializer( it_tables ).
-    lo_json_serializer->serialize( ).
-    APPEND lo_json_serializer->get_data( ) TO rt_data.
+    DATA(lv_json) = /ui2/cl_json=>serialize( data = it_tables ).
+    APPEND lv_json TO rt_data.
 
   ENDMETHOD.
 
@@ -371,9 +370,8 @@ CLASS lcl_db_table IMPLEMENTATION.
       lv_json = |{ lv_json }{ <lv_data> }|.
     ENDLOOP.
 
-    DATA(lo_json_deserializer) = NEW cl_trex_json_deserializer(  ).
-    lo_json_deserializer->deserialize( EXPORTING json = lv_json
-                                       IMPORTING abap = rt_tables ).
+    /ui2/cl_json=>deserialize( EXPORTING json = lv_json
+                               CHANGING  data = rt_tables ).
 
   ENDMETHOD.
 
