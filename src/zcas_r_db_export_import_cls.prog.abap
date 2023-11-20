@@ -369,14 +369,13 @@ CLASS lcl_application IMPLEMENTATION.
         AND strkorr  EQ @space
       INTO TABLE @DATA(lt_help_values).
 
-    DATA(lv_window_title) = CONV string( TEXT-012 ).
     CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
       EXPORTING
         ddic_structure = 'E070'
         retfield       = 'TRKORR'
         dynpprog       = sy-repid
         dynpnr         = sy-dynnr
-        window_title   = lv_window_title
+        window_title   = TEXT-012
         value_org      = 'S'
       TABLES
         value_tab      = lt_help_values
